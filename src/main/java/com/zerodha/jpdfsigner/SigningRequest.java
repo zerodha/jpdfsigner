@@ -89,7 +89,7 @@ public class SigningRequest {
                 return;
             }
         } else {
-            sendResponse("Method not allowed", StatusCodes.INTERNAL_SERVER_ERROR, httpExchange);
+            sendResponse("Method not allowed", StatusCodes.METHOD_NOT_ALLOWED, httpExchange);
             return;
         }
     }
