@@ -4,3 +4,4 @@ workspace/
 .vscode/
 *.pfx
 config.ini
+.envrc

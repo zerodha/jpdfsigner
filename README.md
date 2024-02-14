@@ -22,7 +22,7 @@ See `config.sample.ini` for the configuration.
 
 ### HTTP Server
 
-For running the server, run `java -jar ./target/jpdfsigner-1.0-SNAPSHOT.jar`. This starts the HTTP server is the `server` is true in `config.ini`.
+For running the server, run `java -jar ./target/jpdfsigner-1.0-SNAPSHOT.jar`. This starts the HTTP server if the `server` is true in `config.ini`.
 
 #### API
 
