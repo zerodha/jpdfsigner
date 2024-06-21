@@ -112,6 +112,14 @@ public class OpenPdfSigner {
     public static void main(String[] args)
             throws DocumentException, IOException, GeneralSecurityException {
 
+        // Check if the config file exists.
+        File configFile = new File("config.ini");
+
+        if (!configFile.exists()) {
+            System.out.println("config.ini file not found. Please create a config.ini file.");
+            System.exit(1);
+        }
+
         // Load the config.
         FileInputStream inp = new FileInputStream("config.ini");
         Properties config = new Properties();
