@@ -1,12 +1,5 @@
 package com.zerodha.jpdfsigner;
 
-import java.io.InputStream;
-import java.security.PrivateKey;
-import java.security.cert.Certificate;
-import java.util.concurrent.ExecutorService;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.google.gson.Gson;
 import com.lowagie.text.Font;
 import com.lowagie.text.Rectangle;
@@ -14,23 +7,41 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.util.concurrent.ExecutorService;
 
-// SigningRequest handles the request from the http server to sign.
 public class SigningRequest {
-    PrivateKey key;
-    Certificate[] chain;
-    String reason;
-    String contact;
-    String location;
-    Rectangle rect;
-    OpenPdfSigner app;
-    Font font;
-    int page;
-    // Thread pool executor.
-    ExecutorService executor;
 
-    public SigningRequest(PrivateKey key, Certificate[] chain, String reason, String contact, String location,
-            Rectangle rect, OpenPdfSigner app, Font font, int page, ExecutorService executor) {
+    private static final String CONTENT_TYPE = "text/plain; charset=UTF-8";
+    private static final String METHOD_NOT_ALLOWED = "Method not allowed";
+
+    private final PrivateKey key;
+    private final Certificate[] chain;
+    private final String reason;
+    private final String contact;
+    private final String location;
+    private final Rectangle rect;
+    private final OpenPdfSigner app;
+    private final Font font;
+    private final int page;
+    private final ExecutorService executor;
+
+    public SigningRequest(
+        PrivateKey key,
+        Certificate[] chain,
+        String reason,
+        String contact,
+        String location,
+        Rectangle rect,
+        OpenPdfSigner app,
+        Font font,
+        int page,
+        ExecutorService executor
+    ) {
         this.key = key;
         this.chain = chain;
         this.reason = reason;
@@ -43,54 +54,98 @@ public class SigningRequest {
         this.executor = executor;
     }
 
-    // sendResponse sends the response with the given status code.
-    public static void sendResponse(String response, int code, HttpServerExchange exchange) {
-        exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/plain; charset=UTF-8");
+    public static void sendResponse(
+        String response,
+        int code,
+        HttpServerExchange exchange
+    ) {
+        exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         exchange.setStatusCode(code);
         exchange.getResponseSender().send(response);
     }
 
-    public void handleRequestWithMeta(HttpServerExchange httpExchange) throws Exception {
-        if (httpExchange.getRequestMethod().equals(Methods.POST)) {
-            // If this is in a NIO thread, we dispatch this to the executor,
-            // since we have to do blocking io.
-            if (httpExchange.isInIoThread()) {
-                httpExchange.dispatch(executor, this::handleRequestWithMeta);
-                return;
-            }
-            httpExchange.startBlocking();
-            StringBuilder sb = new StringBuilder();
-            InputStream ios = httpExchange.getInputStream();
-            int i;
-            while ((i = ios.read()) != -1) {
-                sb.append((char) i);
-            }
-
-            try {
-                System.out.println(sb);
-                Gson gson = new Gson();
-                Request req = gson.fromJson(sb.toString(), Request.class);
-                System.out.println(req.getInputFile());
-                String inFile = req.getInputFile();
-                String outFile = req.getOutputFile();
-                String pwd = req.getPassword();
-                String loc = StringUtils.defaultIfEmpty(req.getLocation(), location);
-                String cont = StringUtils.defaultIfEmpty(req.getContact(), contact);
-                String rsn = StringUtils.defaultIfEmpty(req.getReason(), reason);
-
-                this.app.sign(inFile, outFile, pwd, key, chain, rsn,
-                        cont,
-                        loc, rect, font, page);
-                System.out.println("signing file at src: " + inFile + "to output: " + outFile);
-                sendResponse("", 200, httpExchange);
-                return;
-            } catch (Exception e) {
-                sendResponse(e.toString(), 500, httpExchange);
-                return;
-            }
-        } else {
-            sendResponse("Method not allowed", StatusCodes.METHOD_NOT_ALLOWED, httpExchange);
+    public void handleRequestWithMeta(HttpServerExchange httpExchange) {
+        if (!httpExchange.getRequestMethod().equals(Methods.POST)) {
+            sendResponse(
+                METHOD_NOT_ALLOWED,
+                StatusCodes.METHOD_NOT_ALLOWED,
+                httpExchange
+            );
             return;
         }
+
+        if (httpExchange.isInIoThread()) {
+            httpExchange.dispatch(executor, () ->
+                handleRequestWithMeta(httpExchange)
+            );
+            return;
+        }
+
+        httpExchange.startBlocking();
+        try {
+            String requestBody = readInputStream(httpExchange.getInputStream());
+            processRequest(requestBody, httpExchange);
+        } catch (IOException e) {
+            System.err.println("Error reading request body: " + e.getMessage());
+            sendResponse(
+                "Error reading request",
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                httpExchange
+            );
+        }
+    }
+
+    private String readInputStream(InputStream inputStream) throws IOException {
+        try (inputStream) {
+            return new String(
+                inputStream.readAllBytes(),
+                StandardCharsets.UTF_8
+            );
+        }
+    }
+
+    private void processRequest(
+        String requestBody,
+        HttpServerExchange httpExchange
+    ) {
+        try {
+            Request req = new Gson().fromJson(requestBody, Request.class);
+            SignParams params = createSignParams(req);
+            app.sign(params);
+            System.out.println(
+                "Signing file at src: " +
+                req.getInputFile() +
+                " to output: " +
+                req.getOutputFile()
+            );
+            sendResponse("", StatusCodes.OK, httpExchange);
+        } catch (Exception e) {
+            System.err.println("Error processing request: " + e.getMessage());
+            sendResponse(
+                e.toString(),
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                httpExchange
+            );
+        }
+    }
+
+    private SignParams createSignParams(Request req) {
+        SignParams params = new SignParams();
+        params.setSrc(req.getInputFile());
+        params.setDest(req.getOutputFile());
+        params.setPassword(req.getPassword());
+        params.setContact(
+            req.getContact() != null ? req.getContact() : contact
+        );
+        params.setLocation(
+            req.getLocation() != null ? req.getLocation() : location
+        );
+        params.setReason(req.getReason() != null ? req.getReason() : reason);
+        params.setChain(chain);
+        params.setKey(key);
+        params.setRect(rect);
+        params.setFont(font);
+        params.setPage(page);
+        return params;
     }
 }
