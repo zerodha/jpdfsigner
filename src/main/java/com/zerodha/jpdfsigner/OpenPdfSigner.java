@@ -35,21 +35,19 @@ public class OpenPdfSigner {
 
             // PdfWriter.DO_NOT_ENCRYPT_METADATA somehow disables password protection.
             stp.setEncryption(
-                p,
-                p,
-                PdfWriter.ALLOW_PRINTING,
-                PdfWriter.ENCRYPTION_AES_128
-            );
+                    p,
+                    p,
+                    PdfWriter.ALLOW_PRINTING,
+                    PdfWriter.ENCRYPTION_AES_128);
         }
 
         PdfSignatureAppearance sap = stp.getSignatureAppearance();
 
         sap.setCrypto(
-            params.getKey(),
-            params.getChain(),
-            null,
-            PdfSignatureAppearance.WINCER_SIGNED
-        );
+                params.getKey(),
+                params.getChain(),
+                null,
+                PdfSignatureAppearance.WINCER_SIGNED);
         sap.setReason(params.getReason());
         sap.setContact(params.getContact());
         sap.setLocation(params.getLocation());
@@ -66,7 +64,7 @@ public class OpenPdfSigner {
     // format:
     // [[infile, outfile, password], [infile, outfile, password] ...]
     private ArrayList<String[]> getListFromFile(String infile)
-        throws IOException {
+            throws IOException {
         ArrayList<String[]> list = new ArrayList<>();
         BufferedReader br = new BufferedReader(new FileReader(infile));
 
@@ -90,9 +88,8 @@ public class OpenPdfSigner {
     // The function returns an arraylist of lists in the format:
     // [[infile, outfile, password], [infile, outfile, password] ...]
     private ArrayList<String[]> getListFromDirectory(
-        String srcDir,
-        String targetDir
-    ) {
+            String srcDir,
+            String targetDir) {
         ArrayList<String[]> list = new ArrayList<>();
 
         File folder = new File(srcDir);
@@ -113,12 +110,11 @@ public class OpenPdfSigner {
                 }
 
                 list.add(
-                    new String[] {
-                        srcPath,
-                        targetDir + "/" + targetName,
-                        password,
-                    }
-                );
+                        new String[] {
+                                srcPath,
+                                targetDir + "/" + targetName,
+                                password,
+                        });
             }
         }
 
@@ -126,14 +122,13 @@ public class OpenPdfSigner {
     }
 
     public static void main(String[] args)
-        throws DocumentException, IOException, GeneralSecurityException {
+            throws DocumentException, IOException, GeneralSecurityException {
         // Check if the config file exists.
         File configFile = new File("config.ini");
 
         if (!configFile.exists()) {
             System.out.println(
-                "config.ini file not found. Please create a config.ini file."
-            );
+                    "config.ini file not found. Please create a config.ini file.");
             System.exit(1);
         }
 
@@ -156,7 +151,7 @@ public class OpenPdfSigner {
 
     // Start server with the given config.
     public static void startServer(Properties config)
-        throws DocumentException, IOException, GeneralSecurityException {
+            throws DocumentException, IOException, GeneralSecurityException {
         // Initialize the app.
         OpenPdfSigner app = new OpenPdfSigner();
 
@@ -165,38 +160,34 @@ public class OpenPdfSigner {
         font.setColor(16, 181, 60);
         font.setStyle("bold");
 
-        String reason = config.getProperty("reason"), contact =
-            config.getProperty("contact"), location = config.getProperty(
-            "location"
-        );
+        String reason = config.getProperty("reason"), contact = config.getProperty("contact"),
+                location = config.getProperty(
+                        "location");
 
         float[] coords = new float[] {
-            Float.parseFloat(config.getProperty("x1")),
-            Float.parseFloat(config.getProperty("y1")),
-            Float.parseFloat(config.getProperty("x2")),
-            Float.parseFloat(config.getProperty("y2")),
+                Float.parseFloat(config.getProperty("x1")),
+                Float.parseFloat(config.getProperty("y1")),
+                Float.parseFloat(config.getProperty("x2")),
+                Float.parseFloat(config.getProperty("y2")),
         };
         Rectangle rect = new Rectangle(
-            coords[0],
-            coords[1],
-            coords[2],
-            coords[3]
-        );
+                coords[0],
+                coords[1],
+                coords[2],
+                coords[3]);
 
         int page = Integer.parseInt(config.getProperty("page"));
 
         // Initialize OpenPDF crypto.
         KeyStore ks = KeyStore.getInstance("pkcs12");
         ks.load(
-            new FileInputStream(config.getProperty("keyfile")),
-            config.getProperty("password").toCharArray()
-        );
+                new FileInputStream(config.getProperty("keyfile")),
+                config.getProperty("password").toCharArray());
 
         String alias = ks.aliases().nextElement();
         PrivateKey key = (PrivateKey) ks.getKey(
-            alias,
-            config.getProperty("password").toCharArray()
-        );
+                alias,
+                config.getProperty("password").toCharArray());
         Certificate[] chain = ks.getCertificateChain(alias);
 
         ExecutorService executor = Executors.newCachedThreadPool();
@@ -204,44 +195,39 @@ public class OpenPdfSigner {
         int port = Integer.parseInt(config.getProperty("server_port", "8090"));
         String host = config.getProperty("server_host", "localhost");
         Undertow server = Undertow.builder()
-            .addHttpListener(port, host)
-            .setHandler(
-                path()
-                    .addExactPath("/sign", httpExchange -> {
-                        SigningRequest request = new SigningRequest(
-                            key,
-                            chain,
-                            reason,
-                            contact,
-                            location,
-                            rect,
-                            app,
-                            font,
-                            page,
-                            executor
-                        );
-                        request.handleRequestWithMeta(httpExchange);
-                    })
-            )
-            .build();
+                .addHttpListener(port, host)
+                .setHandler(
+                        path()
+                                .addExactPath("/sign", httpExchange -> {
+                                    SigningRequest request = new SigningRequest(
+                                            key,
+                                            chain,
+                                            reason,
+                                            contact,
+                                            location,
+                                            rect,
+                                            app,
+                                            font,
+                                            page,
+                                            executor);
+                                    request.handleRequestWithMeta(httpExchange);
+                                }))
+                .build();
 
         server.start();
     }
 
     // Start CLI.
     public static void startCLI(String[] args, Properties config)
-        throws DocumentException, IOException, GeneralSecurityException {
+            throws DocumentException, IOException, GeneralSecurityException {
         if (args.length < 1) {
             System.out.println(
-                "Contract notes PDF signer for Zerodha\n\n1) PdfSigner file_list.txt"
-            );
+                    "Contract notes PDF signer for Zerodha\n\n1) PdfSigner file_list.txt");
             System.out.println(
-                "The file list should have one entry per line and each entry should be: input.pdf output.pdf"
-            );
+                    "The file list should have one entry per line and each entry should be: input.pdf output.pdf");
             System.out.println("2) PdfSigner input_dir output_dir");
             System.out.println(
-                "3) Starts a HTTP server if server = true is set in config."
-            );
+                    "3) Starts a HTTP server if server = true is set in config.");
             System.exit(0);
         }
 
@@ -253,38 +239,34 @@ public class OpenPdfSigner {
         font.setColor(16, 181, 60);
         font.setStyle("bold");
 
-        String reason = config.getProperty("reason"), contact =
-            config.getProperty("contact"), location = config.getProperty(
-            "location"
-        );
+        String reason = config.getProperty("reason"), contact = config.getProperty("contact"),
+                location = config.getProperty(
+                        "location");
 
         float[] coords = new float[] {
-            Float.parseFloat(config.getProperty("x1")),
-            Float.parseFloat(config.getProperty("y1")),
-            Float.parseFloat(config.getProperty("x2")),
-            Float.parseFloat(config.getProperty("y2")),
+                Float.parseFloat(config.getProperty("x1")),
+                Float.parseFloat(config.getProperty("y1")),
+                Float.parseFloat(config.getProperty("x2")),
+                Float.parseFloat(config.getProperty("y2")),
         };
         Rectangle rect = new Rectangle(
-            coords[0],
-            coords[1],
-            coords[2],
-            coords[3]
-        );
+                coords[0],
+                coords[1],
+                coords[2],
+                coords[3]);
 
         int page = Integer.parseInt(config.getProperty("page"));
 
         // Initialize OpenPDF crypto.
         KeyStore ks = KeyStore.getInstance("pkcs12");
         ks.load(
-            new FileInputStream(config.getProperty("keyfile")),
-            config.getProperty("password").toCharArray()
-        );
+                new FileInputStream(config.getProperty("keyfile")),
+                config.getProperty("password").toCharArray());
 
         String alias = ks.aliases().nextElement();
         PrivateKey key = (PrivateKey) ks.getKey(
-            alias,
-            config.getProperty("password").toCharArray()
-        );
+                alias,
+                config.getProperty("password").toCharArray());
         Certificate[] chain = ks.getCertificateChain(alias);
 
         // Load file list from an input list or from an input directory
@@ -292,8 +274,7 @@ public class OpenPdfSigner {
         if (args.length == 2) {
             if (args[0].equals(args[1])) {
                 System.out.println(
-                    "Can't read and write from the same directory"
-                );
+                        "Can't read and write from the same directory");
                 System.exit(0);
             }
             flist = app.getListFromDirectory(args[0], args[1]);

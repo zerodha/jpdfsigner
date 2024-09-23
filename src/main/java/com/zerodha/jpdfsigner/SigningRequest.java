@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 public class SigningRequest {
@@ -135,12 +136,20 @@ public class SigningRequest {
         params.setDest(req.getOutputFile());
         params.setPassword(req.getPassword());
         params.setContact(
-            req.getContact() != null ? req.getContact() : contact
+            (req.getContact() != null && !req.getContact().isBlank())
+                ? req.getContact()
+                : contact
         );
         params.setLocation(
-            req.getLocation() != null ? req.getLocation() : location
+            (req.getLocation() != null && !req.getLocation().isBlank())
+                ? req.getLocation()
+                : location
         );
-        params.setReason(req.getReason() != null ? req.getReason() : reason);
+        params.setReason(
+            (req.getReason() != null && !req.getReason().isBlank())
+                ? req.getReason()
+                : reason
+        );
         params.setChain(chain);
         params.setKey(key);
         params.setRect(rect);
