@@ -22,7 +22,8 @@ public class SignParams {
     private int page;
 
     // Constructor
-    public SignParams() {}
+    public SignParams() {
+    }
 
     // Getters and Setters
     public String getSrc() {
