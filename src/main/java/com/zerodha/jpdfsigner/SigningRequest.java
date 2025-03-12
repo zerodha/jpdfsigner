@@ -151,9 +151,25 @@ public class SigningRequest {
         );
         params.setChain(chain);
         params.setKey(key);
-        params.setRect(rect);
+
+        // Use custom coordinates from request if provided and valid
+        if (req.getCoordinates() != null && req.getCoordinates().isValid()) {
+            params.setRect(new Rectangle(
+                req.getCoordinates().getX1(),
+                req.getCoordinates().getY1(),
+                req.getCoordinates().getX2(),
+                req.getCoordinates().getY2()
+            ));
+        } else {
+            // Use default coordinates from config
+            params.setRect(rect);
+        }
+
         params.setFont(font);
-        params.setPage(page);
+
+        // Use custom page from request if provided, otherwise use default from config
+        params.setPage(req.getPage() != null ? req.getPage() : page);
+
         return params;
     }
 }

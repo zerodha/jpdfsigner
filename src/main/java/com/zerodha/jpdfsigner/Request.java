@@ -2,6 +2,44 @@ package com.zerodha.jpdfsigner;
 
 import com.google.gson.annotations.SerializedName;
 
+// Coordinates class to represent the signature coordinates
+class Coordinates {
+    @SerializedName("x1")
+    private Float x1;
+
+    @SerializedName("y1")
+    private Float y1;
+
+    @SerializedName("x2")
+    private Float x2;
+
+    @SerializedName("y2")
+    private Float y2;
+
+    public Coordinates() {
+    }
+
+    public Float getX1() {
+        return x1;
+    }
+
+    public Float getY1() {
+        return y1;
+    }
+
+    public Float getX2() {
+        return x2;
+    }
+
+    public Float getY2() {
+        return y2;
+    }
+
+    public boolean isValid() {
+        return x1 != null && y1 != null && x2 != null && y2 != null;
+    }
+}
+
 // Request is the class that represents the json request body of the API.
 class Request {
     @SerializedName("reason")
@@ -21,6 +59,12 @@ class Request {
 
     @SerializedName("password")
     private String password;
+
+    @SerializedName("page")
+    private Integer page;
+
+    @SerializedName("coordinates")
+    private Coordinates coordinates;
 
     public Request() {
     }
@@ -49,4 +93,11 @@ class Request {
         return password;
     }
 
+    public Integer getPage() {
+        return page;
+    }
+
+    public Coordinates getCoordinates() {
+        return coordinates;
+    }
 }
