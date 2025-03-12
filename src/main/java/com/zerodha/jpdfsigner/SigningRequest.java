@@ -12,7 +12,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 public class SigningRequest {
