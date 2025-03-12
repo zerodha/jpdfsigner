@@ -30,7 +30,7 @@ public class OpenPdfSigner {
         PdfStamper stp = PdfStamper.createSignature(reader, os, '\0', null);
 
         // Is there a password?
-        if (params.getPassword().length() > 0) {
+        if (params.getPassword() != null && !params.getPassword().isEmpty()) {
             byte[] p = params.getPassword().getBytes();
 
             // PdfWriter.DO_NOT_ENCRYPT_METADATA somehow disables password protection.
