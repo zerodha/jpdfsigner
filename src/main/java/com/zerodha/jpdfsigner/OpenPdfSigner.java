@@ -8,11 +8,13 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.*;
 import io.undertow.Undertow;
 import java.io.*;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -374,16 +376,6 @@ public class OpenPdfSigner {
 
             server.start();
         } finally {
-            // This will only execute if there's an exception earlier in the method,
-            // since server.start() blocks the thread
-            if (s3Handler != null) {
-                try {
-                    s3Handler.close();
-                    System.out.println("S3Handler resources released");
-                } catch (Exception e) {
-                    System.err.println("Error closing S3Handler: " + e.getMessage());
-                }
-            }
         }
     }
 

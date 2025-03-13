@@ -6,6 +6,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -15,6 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.util.Optional;
 
 /**
  * S3Handler handles file operations with AWS S3, supporting IAM role-based
@@ -53,10 +56,13 @@ public class S3Handler implements AutoCloseable {
      */
     protected S3Client createS3Client(String region) {
         try {
-            return S3Client.builder()
+            S3ClientBuilder c =  S3Client.builder()
                     .region(Region.of(region))
-                    .credentialsProvider(DefaultCredentialsProvider.create())
-                    .build();
+                    .credentialsProvider(DefaultCredentialsProvider.create());
+                    
+                    Optional.ofNullable(System.getenv("AWS_ENDPOINT_URL")).ifPresent(url ->  c.endpointOverride(URI.create(url)));
+                    Optional.ofNullable(System.getenv("AWS_FORCE_PATH_STYLE")).ifPresent(x ->c.forcePathStyle(true)) ;
+                    return c.build();
         } catch (IllegalArgumentException e) {
             // Return null for invalid regions to match test expectations
             return null;
