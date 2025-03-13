@@ -5,7 +5,6 @@ import com.lowagie.text.Rectangle;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Arrays;
-import java.util.Objects;
 
 public class SignParams {
 
