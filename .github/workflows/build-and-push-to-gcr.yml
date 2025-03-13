@@ -1,0 +1,122 @@
+name: Build and Push Docker Image to GHCR on Tag
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger only when a tag matching the pattern 'v*' is pushed (e.g., v1.0.0, v2.1.3)
+
+env:
+  DOCKER_IMAGE_NAME: jpdfsigner
+  IMAGE_TAG: ${{ github.ref_name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Add explicit permissions for GitHub Packages
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Set up JDK
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      # Step 3: Build JAR file
+      - name: Build JAR file
+        run: |
+          mvn clean package
+          echo "Listing JAR files in target directory:"
+          find ./target -name "*.jar" | sort
+      
+      # Step 4: Find the JAR file and set the path
+      - name: Set JAR file path
+        run: |
+          # Find the main JAR file
+          JAR_PATH=$(find ./target -name "*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" | head -n 1)
+          
+          if [ -z "$JAR_PATH" ]; then
+            echo "::error::No JAR file found in target directory"
+            exit 1
+          fi
+          
+          echo "Found JAR file at: $JAR_PATH"
+          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
+          echo "JAR_NAME=$(basename $JAR_PATH)" >> $GITHUB_ENV
+      
+      # Step 5: Generate Changelog
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          echo "Generating changelog for tag ${{ env.IMAGE_TAG }}"
+          # Try to get the previous tag, if it fails, get all commits
+          if git describe --tags --abbrev=0 HEAD^ 2>/dev/null; then
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null)
+            echo "Previous tag found: $PREVIOUS_TAG"
+            CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%an)" --no-merges)
+          else
+            echo "No previous tag found, including all commits"
+            CHANGELOG=$(git log --pretty=format:"- %s (%an)" --no-merges)
+          fi
+          
+          # If changelog is empty, provide a default message
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- Initial release"
+          fi
+          
+          echo "Changelog for ${{ env.IMAGE_TAG }}:"
+          echo "$CHANGELOG"
+          # Use multi-line output for GitHub Actions
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      
+      # Step 6: Log in to GitHub Container Registry
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Step 7: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      # Step 8: Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.IMAGE_TAG }}
+      
+      # Step 9: Create Release
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Changelog
+            ${{ env.changelog }}
+          draft: false
+          prerelease: false
+          files: ${{ env.JAR_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

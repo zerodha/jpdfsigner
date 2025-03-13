@@ -1,0 +1,71 @@
+name: Java Tests
+
+on:
+  push:
+  pull_request:
+
+permissions: write-all
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    container: amazoncorretto:21
+
+    steps:
+      # Install Git and other dependencies
+      - name: Install Git
+        run: |
+          yum update -y
+          yum install -y git
+          git --version
+          
+      # Manual checkout using Git
+      - name: Manual checkout
+        run: |
+          # Configure Git to handle the directory safely
+          git config --global --add safe.directory /__w/jpdfsigner/jpdfsigner
+          
+          # Create a fresh directory and clone into it
+          mkdir -p /tmp/repo
+          cd /tmp/repo
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git .
+          
+          # Copy the files to the workspace
+          cp -r * /__w/jpdfsigner/jpdfsigner/
+          cd /__w/jpdfsigner/jpdfsigner/
+          
+          # Debug info
+          ls -la
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Install Maven if not already in the container
+      - name: Ensure Maven is installed
+        run: |
+          if ! command -v mvn &> /dev/null; then
+            echo "Installing Maven..."
+            yum install -y maven
+          else
+            echo "Maven is already installed"
+            mvn --version
+          fi
+
+      # Run the tests with Maven
+      - name: Build and test with Maven
+        run: mvn -B test
+        
+      # Display test results in the console
+      - name: Print test summary
+        if: always()
+        run: |
+          echo "=== TEST RESULTS ==="
+          if [ -d "target/surefire-reports" ]; then
+            for report in target/surefire-reports/*.txt; do
+              echo "--- $report ---"
+              cat "$report"
+              echo
+            done
+          else
+            echo "No test reports found."
+          fi

@@ -31,17 +31,16 @@ public class SigningRequest {
     private final ExecutorService executor;
 
     public SigningRequest(
-        PrivateKey key,
-        Certificate[] chain,
-        String reason,
-        String contact,
-        String location,
-        Rectangle rect,
-        OpenPdfSigner app,
-        Font font,
-        int page,
-        ExecutorService executor
-    ) {
+            PrivateKey key,
+            Certificate[] chain,
+            String reason,
+            String contact,
+            String location,
+            Rectangle rect,
+            OpenPdfSigner app,
+            Font font,
+            int page,
+            ExecutorService executor) {
         this.key = key;
         this.chain = chain;
         this.reason = reason;
@@ -55,10 +54,9 @@ public class SigningRequest {
     }
 
     public static void sendResponse(
-        String response,
-        int code,
-        HttpServerExchange exchange
-    ) {
+            String response,
+            int code,
+            HttpServerExchange exchange) {
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         exchange.setStatusCode(code);
         exchange.getResponseSender().send(response);
@@ -67,17 +65,14 @@ public class SigningRequest {
     public void handleRequestWithMeta(HttpServerExchange httpExchange) {
         if (!httpExchange.getRequestMethod().equals(Methods.POST)) {
             sendResponse(
-                METHOD_NOT_ALLOWED,
-                StatusCodes.METHOD_NOT_ALLOWED,
-                httpExchange
-            );
+                    METHOD_NOT_ALLOWED,
+                    StatusCodes.METHOD_NOT_ALLOWED,
+                    httpExchange);
             return;
         }
 
         if (httpExchange.isInIoThread()) {
-            httpExchange.dispatch(executor, () ->
-                handleRequestWithMeta(httpExchange)
-            );
+            httpExchange.dispatch(executor, () -> handleRequestWithMeta(httpExchange));
             return;
         }
 
@@ -88,44 +83,39 @@ public class SigningRequest {
         } catch (IOException e) {
             System.err.println("Error reading request body: " + e.getMessage());
             sendResponse(
-                "Error reading request",
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                httpExchange
-            );
+                    "Error reading request",
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    httpExchange);
         }
     }
 
     private String readInputStream(InputStream inputStream) throws IOException {
         try (inputStream) {
             return new String(
-                inputStream.readAllBytes(),
-                StandardCharsets.UTF_8
-            );
+                    inputStream.readAllBytes(),
+                    StandardCharsets.UTF_8);
         }
     }
 
     private void processRequest(
-        String requestBody,
-        HttpServerExchange httpExchange
-    ) {
+            String requestBody,
+            HttpServerExchange httpExchange) {
         try {
             Request req = new Gson().fromJson(requestBody, Request.class);
             SignParams params = createSignParams(req);
             app.sign(params);
             System.out.println(
-                "Signing file at src: " +
-                req.getInputFile() +
-                " to output: " +
-                req.getOutputFile()
-            );
+                    "Signing file at src: " +
+                            req.getInputFile() +
+                            " to output: " +
+                            req.getOutputFile());
             sendResponse("", StatusCodes.OK, httpExchange);
         } catch (Exception e) {
             System.err.println("Error processing request: " + e.getMessage());
             sendResponse(
-                e.toString(),
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                httpExchange
-            );
+                    e.toString(),
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    httpExchange);
         }
     }
 
@@ -135,20 +125,17 @@ public class SigningRequest {
         params.setDest(req.getOutputFile());
         params.setPassword(req.getPassword());
         params.setContact(
-            (req.getContact() != null && !req.getContact().isBlank())
-                ? req.getContact()
-                : contact
-        );
+                (req.getContact() != null && !req.getContact().isBlank())
+                        ? req.getContact()
+                        : contact);
         params.setLocation(
-            (req.getLocation() != null && !req.getLocation().isBlank())
-                ? req.getLocation()
-                : location
-        );
+                (req.getLocation() != null && !req.getLocation().isBlank())
+                        ? req.getLocation()
+                        : location);
         params.setReason(
-            (req.getReason() != null && !req.getReason().isBlank())
-                ? req.getReason()
-                : reason
-        );
+                (req.getReason() != null && !req.getReason().isBlank())
+                        ? req.getReason()
+                        : reason);
         params.setChain(chain);
         params.setKey(key);
 
