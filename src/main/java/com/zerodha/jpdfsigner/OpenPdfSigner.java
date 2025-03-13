@@ -48,7 +48,7 @@ public class OpenPdfSigner {
         boolean s3Enabled = Boolean.parseBoolean(config.getProperty("s3_enabled", "false"));
 
         if (s3Enabled) {
-            String s3Region = config.getProperty("s3_region", "us-east-1");
+            String s3Region = config.getProperty("s3_region");
             try {
                 s3Handler = new S3Handler(s3Region);
 
