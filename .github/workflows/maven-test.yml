@@ -13,12 +13,14 @@ jobs:
     container: amazoncorretto:21
 
     steps:
-      # Install Git and other dependencies
-      - name: Install Git
+      # Install Git, wget, tar, and other dependencies
+      - name: Install Git, wget, and tar
         run: |
           yum update -y
-          yum install -y git
+          yum install -y git wget tar
           git --version
+          wget --version
+          tar --version
           
       # Manual checkout using Git
       - name: Manual checkout
@@ -40,16 +42,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-      # Install Maven if not already in the container
-      - name: Ensure Maven is installed
+      # Install a specific version of Maven
+      - name: Install Maven
         run: |
-          if ! command -v mvn &> /dev/null; then
-            echo "Installing Maven..."
-            yum install -y maven
-          else
-            echo "Maven is already installed"
-            mvn --version
-          fi
+          # Install Maven 3.8.8
+          MAVEN_VERSION=3.8.8
+          wget https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz
+          tar -xzf apache-maven-$MAVEN_VERSION-bin.tar.gz -C /usr/local/
+          ln -s /usr/local/apache-maven-$MAVEN_VERSION/bin/mvn /usr/local/bin/mvn
+          
+          # Verify installation
+          mvn --version
 
       # Run the tests with Maven
       - name: Build and test with Maven

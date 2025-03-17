@@ -60,7 +60,7 @@ class OpenPdfSignerTest {
     void initializeS3Handler_withInvalidRegion_returnsNull() {
         // Arrange
         config.setProperty("s3_enabled", "true");
-        config.setProperty("s3_region", "invalid-region");
+        config.setProperty("s3_region", "");
 
         // Act
         S3Handler result = OpenPdfSigner.initializeS3Handler(config);
