@@ -2,6 +2,8 @@ package com.zerodha.jpdfsigner;
 
 import com.lowagie.text.Font;
 import com.lowagie.text.Rectangle;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
