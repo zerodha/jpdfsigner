@@ -1,4 +1,4 @@
-FROM docker.io/maven:3.9.12-amazoncorretto-25 as builder
+FROM docker.io/maven:3.9.16-amazoncorretto-25 as builder
 
 WORKDIR /app
 

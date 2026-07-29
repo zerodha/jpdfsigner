@@ -45,8 +45,8 @@ jobs:
       # Install a specific version of Maven
       - name: Install Maven
         run: |
-          # Install Maven 3.9.12
-          MAVEN_VERSION=3.9.12
+          # Install Maven 3.9.16
+          MAVEN_VERSION=3.9.16
           wget https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz
           tar -xzf apache-maven-$MAVEN_VERSION-bin.tar.gz -C /usr/local/
           ln -s /usr/local/apache-maven-$MAVEN_VERSION/bin/mvn /usr/local/bin/mvn
