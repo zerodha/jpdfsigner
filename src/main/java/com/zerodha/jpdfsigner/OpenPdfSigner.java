@@ -221,7 +221,7 @@ public class OpenPdfSigner {
             stp.setEncryption(
                     p,
                     p,
-                    PdfWriter.ALLOW_PRINTING,
+                    PdfWriter.ALLOW_PRINTING | PdfWriter.ALLOW_SCREENREADERS,
                     PdfWriter.ENCRYPTION_AES_128);
         }
 
