@@ -238,7 +238,80 @@ public class OpenPdfSigner {
         sap.setVisibleSignature(params.getRect(), params.getPage(), null);
         sap.setLayer2Font(params.getFont());
         sap.setAcro6Layers(true);
+
+        // Must run before close(), which is what serialises the catalog and pages.
+        preserveAccessibility(stp, params.getPage());
+
         stp.close();
+    }
+
+    /**
+     * Keep tagged (PDF/UA) input conformant across signing.
+     *
+     * <p>
+     * Signing itself does not drop catalog or page entries - PdfStamperImp in
+     * non-append mode copies every object straight from the reader. What it does do
+     * is add a signature widget annotation to the signature page, and PDF/UA-1
+     * (ISO 14289-1, 7.18.3) requires {@code /Tabs /S} on any page that contains
+     * annotations. A page that legitimately had no {@code /Tabs} before signing
+     * therefore becomes non-conformant afterwards. We also ensure
+     * {@code /ViewerPreferences /DisplayDocTitle true} (7.1), which assistive tech
+     * relies on to announce the document title instead of the file name.
+     *
+     * <p>
+     * Only applied to tagged documents, so output for untagged input is unchanged.
+     *
+     * @param stp            the stamper, before {@code close()}
+     * @param signaturePage  page the widget goes on; 0 means every page
+     */
+    private static void preserveAccessibility(PdfStamper stp, int signaturePage) {
+        PdfReader reader = stp.getReader();
+        PdfDictionary catalog = reader.getCatalog();
+
+        if (!isTagged(catalog)) {
+            return;
+        }
+
+        // Mutate the catalog directly. PdfStamper.setViewerPreferences()/
+        // addViewerPreference() route through PdfViewerPreferencesImp.addToCatalog(),
+        // which does catalog.remove(VIEWERPREFERENCES) and rebuilds the dictionary
+        // from its own (initially empty) state - that would silently drop entries the
+        // producer set, such as /Direction.
+        PdfDictionary viewerPrefs = catalog.getAsDict(PdfName.VIEWERPREFERENCES);
+        if (viewerPrefs == null) {
+            viewerPrefs = new PdfDictionary();
+            catalog.put(PdfName.VIEWERPREFERENCES, viewerPrefs);
+        }
+        if (viewerPrefs.get(PdfName.DISPLAYDOCTITLE) == null) {
+            viewerPrefs.put(PdfName.DISPLAYDOCTITLE, PdfBoolean.PDFTRUE);
+        }
+
+        for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+            PdfDictionary pageDict = reader.getPageN(page);
+            if (pageDict == null) {
+                continue;
+            }
+            // The signature widget is only attached during close(), so /Annots on the
+            // signature page cannot be relied on yet.
+            boolean hasAnnots = signaturePage == 0
+                    || page == signaturePage
+                    || pageDict.get(PdfName.ANNOTS) != null;
+            if (hasAnnots && pageDict.get(PdfName.TABS) == null) {
+                pageDict.put(PdfName.TABS, PdfName.S);
+            }
+        }
+    }
+
+    /**
+     * True if the document declares itself as tagged via /MarkInfo /Marked true.
+     */
+    private static boolean isTagged(PdfDictionary catalog) {
+        PdfDictionary markInfo = catalog.getAsDict(PdfName.MARKINFO);
+        if (markInfo == null) {
+            return false;
+        }
+        PdfBoolean marked = markInfo.getAsBoolean(PdfName.MARKED);
+        return marked != null && marked.booleanValue();
     }
 
     // Get the list of PDF files to convert from a CSV file.
